@@ -48,7 +48,7 @@ body:
     attributes:
       label: Cheia de licență
       description: Cheia de licență pe care ați primit-o.
-      placeholder: "Exemplu: VULE-A3F2-9B1C-E7D4-52A8"
+      placeholder: "Exemplu: PAGO-A3F2-9B1C-E7D4-52A8"
     validations:
       required: true
 
