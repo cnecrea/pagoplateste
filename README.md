@@ -35,7 +35,7 @@ Datele vin prin API-ul aplicației mobile Pago Plătește (`pago.cloud`), care e
 | `/authentication/uaa/v1.00/user_profile` | Profil utilizator (nume, email, telefon) |
 | `/pago-freemium/subscription/active` | Abonament activ (perioadă, plăți rămase) |
 | `/payment/cards` | Carduri de plată (tip, alias, activ, default) |
-| `/notification_v1_1/details/cars` | Vehicule cu alerte (RCA, ITP, vinieta, CASCO) |
+| `/notification_v1_1/details/cars` | Vehicule cu alerte (RCA, ITP) |
 | `/sdk/bills/accounts/summary` | Facturi emise (sumă datorată + scadență) |
 | `/payment/payment-details-v2?paymentEntityType=INVOICE` | Conturi furnizori (locații de facturare) |
 | `/payment/payment-details-v2?paymentEntityType=all` | Plăți recente (toate tipurile) |
@@ -308,9 +308,7 @@ custom_components/pagoplateste/
 
 2. **Facturi emise fără furnizor** — endpoint-ul `/sdk/bills/accounts/summary` returnează doar sumă + scadență, fără numele furnizorului sau locația. Bills SDK-ul Pago folosește un host intern separat, inaccesibil prin API-ul public.
 
-3. **Roviniete și taxa de pod** — endpoint-urile CNAIR necesită verificare per mașină (~30s per vehicul). Sunt excluse din ciclul de actualizare din cauza latenței. Pot fi adăugate la cerere pe un interval separat.
-
-4. **Interval minim de actualizare** — minimum 1 oră (3600 secunde), maximum 24 ore (86400 secunde), pentru a nu suprasolicita API-ul Pago.
+3. **Interval minim de actualizare** — minimum 1 oră (3600 secunde), maximum 24 ore (86400 secunde), pentru a nu suprasolicita API-ul Pago.
 
 5. **Senzori dinamici** — senzorii per furnizor și per vehicul sunt creați la prima actualizare. Dacă adaugi un vehicul sau furnizor nou în Pago, restartează integrarea pentru a-l detecta.
 
