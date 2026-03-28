@@ -1,12 +1,16 @@
 {
   "domain": "pagoplateste",
   "name": "Pago Plătește",
-  "codeowners": ["@cnecrea"],
+  "codeowners": [
+    "@cnecrea"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/cnecrea/pagoplateste",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "requirements": ["cryptography>=41.0.0"],
-  "version": "0.0.0"
+  "requirements": [
+    "cryptography>=41.0.0"
+  ],
+  "version": "1.0.0"
 }
