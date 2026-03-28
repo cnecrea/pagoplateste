@@ -1,6 +1,6 @@
 # Pago Plătește — Integrare Home Assistant
 
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.11%2B-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.x%2B-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/cnecrea/pagoplateste)](https://github.com/cnecrea/pagoplateste/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/cnecrea/pagoplateste?style=flat&logo=github)](https://github.com/cnecrea/pagoplateste/stargazers)
@@ -21,7 +21,7 @@ Oferă senzori dedicați pentru profil și abonament, carduri active, vehicule c
 - **Facturi emise** — lista facturilor curente de la furnizori, cu sumă totală datorată și scadențe
 - **Conturi furnizori** — locațiile de facturare per furnizor, cu ultima plată și sumă
 - **Arhivă plăți** — plățile efectuate la fiecare furnizor (anul curent), cu total per furnizor
-- **Licențiere** — sistem de licențe cu perioadă de evaluare, activare online, heartbeat periodic
+- **Licențiere** — sistem de licențe cu perioadă de evaluare și activare online
 - **Reconfigurare fără reinstalare** — OptionsFlow pentru modificarea credențialelor
 
 ---
@@ -273,7 +273,7 @@ custom_components/pagoplateste/
 ├── coordinator.py       # DataUpdateCoordinator — fetch paralel endpoint-uri Pago
 ├── diagnostics.py       # Export diagnostic (licență, coordinator, senzori activi)
 ├── entity.py            # Clasă de bază PagoEntity (entity_id custom, device_info, licență)
-├── license.py           # LicenseManager — fingerprint, activare, heartbeat, Ed25519
+├── license.py           # Modul de licențiere
 ├── manifest.json        # Metadata integrare
 ├── sensor.py            # Clase senzor (profil, carduri, vehicule, facturi, furnizori, plăți)
 ├── strings.json         # Traduceri implicite (engleză)
@@ -298,7 +298,7 @@ custom_components/pagoplateste/
 - **Home Assistant** 2024.x sau mai nou (pattern `entry.runtime_data`)
 - **HACS** (opțional, pentru instalare ușoară)
 - **Cont Pago Plătește** activ cu email + parolă
-- **Dependența Python**: `cryptography>=41.0.0` (pentru verificarea semnăturii Ed25519 a licenței)
+- **Dependența Python**: `cryptography>=41.0.0` (instalată automat de Home Assistant)
 
 ---
 
@@ -337,4 +337,4 @@ Dacă îți place această integrare, oferă-i un ⭐ pe [GitHub](https://github
 
 ## Licență
 
-[MIT](LICENSE)
+MIT
