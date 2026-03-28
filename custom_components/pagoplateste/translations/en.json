@@ -1,0 +1,83 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pago Plătește — Authentication",
+        "description": "Enter your Pago account credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "scan_interval": "Update interval (seconds, minimum 3600 = 1 hour)"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed. Check your email and password.",
+      "connection_failed": "Could not connect to the Pago server.",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "licenta": "License",
+          "reconfigure": "Reconfigure account"
+        }
+      },
+      "licenta": {
+        "title": "Pago Plătește License",
+        "description": "Status: {license_status}\n\nEnter your license key to activate:",
+        "data": {
+          "license_key": "License key"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Pago account",
+        "description": "Enter your new credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "scan_interval": "Update interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed.",
+      "connection_failed": "Connection error.",
+      "unknown": "Unknown error.",
+      "license_key_empty": "License key cannot be empty.",
+      "license_key_invalid": "Invalid license key.",
+      "license_already_used": "This key has already been used.",
+      "license_key_expired": "License key has expired.",
+      "license_fingerprint_mismatch": "Key does not match this device.",
+      "license_network_error": "Network error during license verification.",
+      "license_server_error": "Server error during license verification."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cont": {
+        "name": "Pago Account"
+      },
+      "carduri": {
+        "name": "Pago Cards"
+      },
+      "facturi": {
+        "name": "Bills archive"
+      },
+      "plati": {
+        "name": "Payments archive"
+      },
+      "rca": {
+        "name": "Car insurance (RCA)"
+      },
+      "licenta_necesara": {
+        "name": "License required"
+      }
+    }
+  }
+}

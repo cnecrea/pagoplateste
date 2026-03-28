@@ -1,0 +1,83 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pago Plătește — Autentificare",
+        "description": "Introduceți credențialele contului Pago.",
+        "data": {
+          "email": "Email",
+          "password": "Parolă",
+          "scan_interval": "Interval actualizare (secunde, minim 3600 = 1 oră)"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Autentificare eșuată. Verificați email-ul și parola.",
+      "connection_failed": "Nu s-a putut conecta la serverul Pago.",
+      "unknown": "Eroare necunoscută."
+    },
+    "abort": {
+      "already_configured": "Acest cont este deja configurat."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "licenta": "Licență",
+          "reconfigure": "Reconfigurare cont"
+        }
+      },
+      "licenta": {
+        "title": "Licență Pago Plătește",
+        "description": "Status: {license_status}\n\nIntroduceți cheia de licență pentru activare:",
+        "data": {
+          "license_key": "Cheie de licență"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurare cont Pago",
+        "description": "Introduceți noile credențiale.",
+        "data": {
+          "email": "Email",
+          "password": "Parolă",
+          "scan_interval": "Interval actualizare (secunde)"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Autentificare eșuată.",
+      "connection_failed": "Eroare de conexiune.",
+      "unknown": "Eroare necunoscută.",
+      "license_key_empty": "Cheia de licență nu poate fi goală.",
+      "license_key_invalid": "Cheie de licență invalidă.",
+      "license_already_used": "Această cheie a fost deja utilizată.",
+      "license_key_expired": "Cheia de licență a expirat.",
+      "license_fingerprint_mismatch": "Cheia nu corespunde acestui dispozitiv.",
+      "license_network_error": "Eroare de rețea la verificarea licenței.",
+      "license_server_error": "Eroare server la verificarea licenței."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cont": {
+        "name": "Cont Pago"
+      },
+      "carduri": {
+        "name": "Carduri Pago"
+      },
+      "facturi": {
+        "name": "Arhivă facturi"
+      },
+      "plati": {
+        "name": "Arhivă plăți"
+      },
+      "rca": {
+        "name": "RCA"
+      },
+      "licenta_necesara": {
+        "name": "Licență necesară"
+      }
+    }
+  }
+}
