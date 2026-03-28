@@ -12,7 +12,7 @@ Folosește email-ul și parola contului Pago Plătește — aceleași cu care te
 
 ### Ce date extrage integrarea din contul meu Pago?
 
-Integrarea aduce: profilul utilizatorului (nume, email, telefon), abonamentul activ (plăți rămase, perioadă), cardurile de plată, vehiculele cu alertele asociate (RCA, ITP, vinieta, CASCO), facturile emise curente, conturile de facturare per furnizor și plățile recente.
+Integrarea aduce: profilul utilizatorului (nume, email, telefon), abonamentul activ (plăți rămase, perioadă), cardurile de plată, vehiculele cu alerte RCA și ITP, facturile emise curente, conturile de facturare per furnizor și plățile recente.
 
 Nu se fac plăți, nu se modifică setări și nu se trimit notificări prin API — integrarea este read-only.
 
@@ -21,12 +21,6 @@ Nu se fac plăți, nu se modifică setări și nu se trimit notificări prin API
 ### De ce facturile emise nu au numele furnizorului?
 
 Endpoint-ul public `/sdk/bills/accounts/summary` returnează doar sumă datorată și data scadenței, fără informații despre furnizor sau locația de facturare. Aplicația mobilă Pago obține aceste detalii printr-un SDK intern (Bills SDK) care comunică cu un host separat, inaccesibil prin API-ul public. Aceasta este o limitare a API-ului, nu a integrării.
-
----
-
-### Ce se întâmplă cu rovinieta și taxa de pod?
-
-Endpoint-urile pentru roviniete (`/pago-vignette/vignette/`) și taxa de pod (`/pago-bridge-toll/bridge-toll/`) verifică fiecare mașină la CNAIR, cu un timp de răspuns de ~30 secunde per vehicul. Cu mai multe mașini, latența devine inacceptabilă pentru ciclul de actualizare al coordinator-ului. Din acest motiv, aceste endpoint-uri sunt excluse din fetch-ul periodic. Codul pentru ele există deja în `api.py` și poate fi activat la cerere pe un interval separat.
 
 ---
 
