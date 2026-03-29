@@ -129,7 +129,7 @@ jobs:
               commits = "- Nu s-au putut extrage commit-urile"
 
           # ── Generează fișierul markdown ──
-          body = f"""## pagoplateste v{new_version}
+          body = f"""## Pago Plătește v{new_version}
 
           ### 📋 Modificări
 
@@ -143,7 +143,7 @@ jobs:
           |:--------:|:------------:|:--------------:|
           | {stars} | {instalari} | {clone_14z} |
 
-          Dacă integrarea **pagoplateste** îți este utilă, lasă un ⭐ pe repository — îi ajută și pe alți utilizatori să o descopere.
+          Dacă integrarea **Pago Plătește** îți este utilă, lasă un ⭐ pe repository — îi ajută și pe alți utilizatori să o descopere.
 
           ---
 
