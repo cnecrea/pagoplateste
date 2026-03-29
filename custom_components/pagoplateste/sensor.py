@@ -93,12 +93,13 @@ def _curata_furnizor(furnizor: str | None) -> str:
 
 
 def _furnizor_display(furnizor: str | None) -> str:
-    """Nume furnizor afișabil: 'rds.crawler' → 'RDS', 'engie.gas' → 'Engie Gas'."""
+    """Nume furnizor afișabil: 'rds.crawler' → 'Rds', 'premier_energy.crawler' → 'Premier Energy'."""
     if not furnizor:
         return "Necunoscut"
     # Scoatem .crawler
     name = furnizor.replace(".crawler", "")
-    # Dacă mai are punct, separăm: engie.gas → Engie Gas
+    # Înlocuim underscore cu spațiu, apoi separăm pe punct
+    name = name.replace("_", " ")
     parts = name.split(".")
     return " ".join(p.capitalize() for p in parts if p)
 
@@ -428,13 +429,11 @@ class ContFurnizorSensor(PagoEntity, SensorEntity):
         self._custom_entity_id = f"sensor.{DOMAIN}_{uid}_cont_{slug}"
 
     def _conturi_furnizor(self) -> list[dict[str, Any]]:
-        """Locațiile (conturile) pentru acest furnizor, doar anul curent."""
+        """Locațiile (conturile) pentru acest furnizor."""
         conturi = self.coordinator.data.get(DATA_CONTURI_FACTURI) or []
-        an_str = str(datetime.now().year)
         filtered = [
             c for c in conturi
             if c.get("furnizor") == self._furnizor_raw
-            and str(c.get("ultima_plata_data") or "").startswith(an_str)
         ]
         filtered.sort(key=lambda c: c.get("locatie") or "")
         return filtered
@@ -539,10 +538,12 @@ class ArhivaPlatiFurnizorSensor(PagoEntity, SensorEntity):
         )
 
         attrs: dict[str, Any] = {
-            f"Total plati {display}": f"{total:.2f} lei",
+            f"Total plăți {display}": f"{total:.2f} lei",
         }
 
-        for p in plati:
+        # Afișăm ultimele 12 plăți (cele mai recente), totalul rămâne pe toate
+        plati_afisate = plati[-12:] if len(plati) > 12 else plati
+        for p in plati_afisate:
             suma = p.get("suma_platita") or 0
             locatie = p.get("locatie") or "—"
             data = _data_completa(p.get("data"))
