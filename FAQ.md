@@ -36,9 +36,36 @@ Da, fiecare cont Pago (email diferit) se adaugă ca intrare separată. Nu poți 
 
 ---
 
+### Ce e licența și de ce am nevoie de ea?
+
+Integrarea folosește un sistem de licențiere server-side (v3.3) cu semnături Ed25519 și HMAC-SHA256. Fără o licență validă, integrarea afișează doar senzorul „Licență necesară" și nu creează senzori sau butoane funcționale.
+
+Licența se achiziționează de la: [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
+
+După achiziție, introdu cheia de licență din OptionsFlow:
+1. **Setări** → **Dispozitive și Servicii** → **Pago Plătește** → **Configurare**
+2. Selectează **Licență**
+3. Completează câmpul „Cheie licență"
+4. Salvează
+
+---
+
 ### De ce apare „Licență necesară" pe toți senzorii?
 
 Integrarea folosește un sistem de licențiere. Dacă perioada de evaluare a expirat sau licența nu a fost activată, toți senzorii afișează „Licență necesară". Datele continuă să fie aduse de la API, dar nu sunt expuse. Activează o licență din OptionsFlow → Licență (vezi [SETUP.md](SETUP.md)).
+
+---
+
+### Am introdus licența dar senzorii tot arată „Licență necesară". De ce?
+
+Câteva cauze posibile:
+
+1. **Licența nu a fost validată** — verifică logurile pentru mesaje cu `LICENSE`
+2. **Serverul de licențe nu este accesibil** — dacă HA nu are acces la internet, validarea eșuează
+3. **Cheie greșită** — verifică că ai copiat cheia corect, fără spații suplimentare
+4. **Restartare necesară** — în rare cazuri, un restart al HA poate rezolva problema
+
+Activează debug logging ([DEBUG.md](DEBUG.md)) și caută mesaje legate de licență.
 
 ---
 

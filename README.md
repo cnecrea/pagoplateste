@@ -22,7 +22,8 @@ Oferă senzori dedicați pentru profil și abonament, carduri active, vehicule c
 - **Conturi furnizori** — locațiile de facturare per furnizor, cu ultima plată și sumă
 - **Arhivă plăți** — plățile efectuate la fiecare furnizor (anul curent), cu total per furnizor
 - **Licențiere** — sistem de licențe cu perioadă de evaluare și activare online
-- **Reconfigurare fără reinstalare** — OptionsFlow pentru modificarea credențialelor
+- **Sistem de licență** — fără licență validă se afișează doar senzorul „Licență necesară"
+- **Reconfigurare fără reinstalare** — OptionsFlow pentru modificarea credențialelor și licență
 
 ---
 
@@ -76,14 +77,18 @@ Autentificarea se face cu email + parolă prin endpoint-ul OAuth2 Pago (grant_ty
 | **Parolă** | Parola contului Pago | — |
 | **Interval actualizare** | Secunde între interogările API | `3600` (1 oră) |
 
-### Pasul 2 — Reconfigurare (opțional)
+### Pasul 2 — Licență
+
+Integrarea necesită o licență validă. Poți achiziționa una de la [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste). Licența se introduce din **OptionsFlow** (Setări → Dispozitive și Servicii → Pago Plătește → Configurare → Licență).
+
+### Pasul 3 — Reconfigurare (opțional)
 
 Setările pot fi modificate după instalare, fără a șterge integrarea:
 
 1. **Setări** → **Dispozitive și Servicii** → click pe **Pago Plătește**
 2. Click pe **Configurare** (⚙️)
 3. Alege **Reconfigurare cont** sau **Licență**
-4. Modifică setările dorite → **Salvează**
+4. Modifică setările dorite → **Salvează** (integrarea se reîncarcă automat, fără restart)
 
 Detalii complete în [SETUP.md](SETUP.md).
 
@@ -204,6 +209,12 @@ Notificare SMS RCA: "Da"
 Notificare email RCA: "Da"
 ```
 
+### Senzor: Licență (fără licență validă)
+
+| Senzor | Entity ID | Valoare principală | Icon |
+|--------|-----------|-------------------|------|
+| Licență necesară | `sensor.pagoplateste_{user_id}_licenta` | „Licență necesară" | mdi:license |
+
 ---
 
 ## Exemple de automatizări
@@ -273,7 +284,7 @@ custom_components/pagoplateste/
 ├── coordinator.py       # DataUpdateCoordinator — fetch paralel endpoint-uri Pago
 ├── diagnostics.py       # Export diagnostic (licență, coordinator, senzori activi)
 ├── entity.py            # Clasă de bază PagoEntity (entity_id custom, device_info, licență)
-├── license.py           # Modul de licențiere
+├── license.py           # Manager licență (server-side v3.3, Ed25519, HMAC-SHA256)
 ├── manifest.json        # Metadata integrare
 ├── sensor.py            # Clase senzor (profil, carduri, vehicule, facturi, furnizori, plăți)
 ├── strings.json         # Traduceri implicite (engleză)
@@ -298,6 +309,7 @@ custom_components/pagoplateste/
 - **Home Assistant** 2024.x sau mai nou (pattern `entry.runtime_data`)
 - **HACS** (opțional, pentru instalare ușoară)
 - **Cont Pago Plătește** activ cu email + parolă
+- **Licență** validă — [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
 - **Dependența Python**: `cryptography>=41.0.0` (instalată automat de Home Assistant)
 
 ---

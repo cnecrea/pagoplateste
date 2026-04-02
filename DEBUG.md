@@ -156,6 +156,22 @@ Fișierul JSON conține informații despre configurare, starea licenței, starea
 
 ---
 
+### Licență invalidă
+
+```
+[LICENSE] Licența nu este validă. Motiv: expired / invalid_key / server_unreachable.
+[Pago] Integrarea nu are licență validă. Senzorii vor afișa 'Licență necesară'.
+```
+
+**Cauza**: licența a expirat, cheia este greșită, sau serverul de licențe nu este accesibil.
+
+**Rezolvare**:
+1. Verifică cheia de licență în OptionsFlow
+2. Dacă a expirat, reînnoiește de la [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
+3. Dacă serverul nu e accesibil, există un grace period — licența rămâne validă temporar
+
+---
+
 ### Eroare „cryptography" la prima instalare
 
 **Cauza**: Dependența `cryptography>=41.0.0` nu s-a instalat automat.
@@ -194,6 +210,14 @@ Pago: login OK, token expiră în 3600s
 ```
 (apare de două ori dacă token-ul a expirat între cicluri)
 
+### Licență — heartbeat
+
+```
+[LICENSE] Heartbeat OK. Licența este validă (expiră: 2027-01-15).
+```
+
+**Cauza**: verificarea periodică a licenței cu serverul a reușit. Comportament normal.
+
 ### Licență validă
 ```
 [Pago] Licență activă — tip: perpetual
@@ -202,11 +226,6 @@ Pago: login OK, token expiră în 3600s
 ### Trial activ
 ```
 [Pago] Perioadă de evaluare — 14 zile rămase
-```
-
-### Licență invalidă
-```
-[Pago] Integrarea nu are licență validă. Senzorii vor afișa 'Licență necesară'.
 ```
 
 ---

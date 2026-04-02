@@ -10,6 +10,7 @@ Acest ghid detaliază pașii de instalare, configurare inițială, reconfigurare
 
 - **Home Assistant** versiunea 2024.x sau mai nouă (necesită pattern-ul `entry.runtime_data`)
 - **Cont Pago Plătește** activ — cel din aplicația mobilă Pago (email + parolă)
+- **Licență** validă — [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
 - **Conexiune la internet** — integrarea comunică cu serverele Pago pentru date și cu serverul de licențiere
 
 ---
@@ -83,6 +84,21 @@ Imediat după configurare:
 - Coordinator-ul aduce toate datele: profil, abonament, carduri, mașini, facturi, conturi furnizori, plăți recente
 - Senzorii sunt creați automat — un device „Pago Plătește (email)" cu toți senzorii
 - Senzorii dinamici (per furnizor, per vehicul) sunt creați pe baza datelor existente la momentul primei actualizări
+
+### Pasul 4 — Licență
+
+Integrarea necesită o **licență validă** pentru a funcționa complet. Fără licență:
+- Se creează doar senzorul `sensor.pagoplateste_{user_id}_licenta` cu valoarea „Licență necesară"
+- Toți senzorii normali sunt dezactivați și afișează „Licență necesară"
+
+Pentru a introduce licența:
+1. **Setări** → **Dispozitive și Servicii**
+2. Găsește **Pago Plătește** → click pe **Configurare** (⚙️)
+3. Selectează **Licență**
+4. Introdu cheia de licență (format: `PAGO-XXXX-XXXX-XXXX-XXXX`)
+5. Click **Salvează**
+
+Licențe disponibile la: [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
 
 ---
 
