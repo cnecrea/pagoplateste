@@ -305,8 +305,9 @@
     }
   },
   "releases": {
+    "1.2.0": 0,
     "1.1.0": 2,
     "1.0.0": 0
   },
-  "ultima_actualizare": "2026-04-02T07:04:16Z"
+  "ultima_actualizare": "2026-04-02T09:48:52Z"
 }
