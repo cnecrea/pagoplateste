@@ -28,7 +28,7 @@ CONF_UPDATE_INTERVAL: Final = "scan_interval"
 # ═══════════════════════════════════════════════════════════════════════
 
 LICENSE_DATA_KEY: Final = "pagoplateste_license_manager"
-LICENSE_PURCHASE_URL: Final = "https://hubinteligent.org/licenta/pagoplateste"
+LICENSE_PURCHASE_URL: Final = "https://hubinteligent.org/donate?ref=pagoplateste"
 
 # ═══════════════════════════════════════════════════════════════════════
 # Pago API
