@@ -40,7 +40,7 @@ Da, fiecare cont Pago (email diferit) se adaugă ca intrare separată. Nu poți 
 
 Integrarea folosește un sistem de licențiere server-side (v3.3) cu semnături Ed25519 și HMAC-SHA256. Fără o licență validă, integrarea afișează doar senzorul „Licență necesară" și nu creează senzori sau butoane funcționale.
 
-Licența se achiziționează de la: [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
+Licența se achiziționează de la: [hubinteligent.org/donate?ref=pagoplateste](https://hubinteligent.org/donate?ref=pagoplateste)
 
 După achiziție, introdu cheia de licență din OptionsFlow:
 1. **Setări** → **Dispozitive și Servicii** → **Pago Plătește** → **Configurare**
