@@ -10,7 +10,7 @@ Acest ghid detaliază pașii de instalare, configurare inițială, reconfigurare
 
 - **Home Assistant** versiunea 2024.x sau mai nouă (necesită pattern-ul `entry.runtime_data`)
 - **Cont Pago Plătește** activ — cel din aplicația mobilă Pago (email + parolă)
-- **Licență** validă — [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
+- **Licență** validă — [hubinteligent.org/donate?ref=pagoplateste](https://hubinteligent.org/donate?ref=pagoplateste)
 - **Conexiune la internet** — integrarea comunică cu serverele Pago pentru date și cu serverul de licențiere
 
 ---
@@ -98,7 +98,7 @@ Pentru a introduce licența:
 4. Introdu cheia de licență (format: `PAGO-XXXX-XXXX-XXXX-XXXX`)
 5. Click **Salvează**
 
-Licențe disponibile la: [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
+Licențe disponibile la: [hubinteligent.org/donate?ref=pagoplateste](https://hubinteligent.org/donate?ref=pagoplateste)
 
 ---
 
