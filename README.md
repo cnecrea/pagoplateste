@@ -79,7 +79,7 @@ Autentificarea se face cu email + parolă prin endpoint-ul OAuth2 Pago (grant_ty
 
 ### Pasul 2 — Licență
 
-Integrarea necesită o licență validă. Poți achiziționa una de la [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste). Licența se introduce din **OptionsFlow** (Setări → Dispozitive și Servicii → Pago Plătește → Configurare → Licență).
+Integrarea necesită o licență validă. Poți achiziționa una de la [hubinteligent.org/donate?ref=pagoplateste](https://hubinteligent.org/donate?ref=pagoplateste). Licența se introduce din **OptionsFlow** (Setări → Dispozitive și Servicii → Pago Plătește → Configurare → Licență).
 
 ### Pasul 3 — Reconfigurare (opțional)
 
@@ -309,7 +309,7 @@ custom_components/pagoplateste/
 - **Home Assistant** 2024.x sau mai nou (pattern `entry.runtime_data`)
 - **HACS** (opțional, pentru instalare ușoară)
 - **Cont Pago Plătește** activ cu email + parolă
-- **Licență** validă — [hubinteligent.org/licenta/pagoplateste](https://hubinteligent.org/licenta/pagoplateste)
+- **Licență** validă — [hubinteligent.org/donate?ref=pagoplateste](https://hubinteligent.org/donate?ref=pagoplateste)
 - **Dependența Python**: `cryptography>=41.0.0` (instalată automat de Home Assistant)
 
 ---
