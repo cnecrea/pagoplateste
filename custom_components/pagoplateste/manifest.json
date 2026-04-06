@@ -7,9 +7,9 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/cnecrea/pagoplateste",
-  "issue_tracker": "https://github.com/cnecrea/eonromania/issues",
   "integration_type": "service",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/cnecrea/pagoplateste/issues",
   "requirements": [
     "cryptography>=41.0.0"
   ],
