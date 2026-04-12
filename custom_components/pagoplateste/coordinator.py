@@ -19,6 +19,7 @@ from .const import (
     CONF_POS_USER_ID,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    LICENSE_DATA_KEY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,6 +50,12 @@ class PagoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch date de la API-ul Pago."""
+        # Verificare licență — nu fetchuim date dacă licența/trial nu e validă
+        license_mgr = self.hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
+        if license_mgr and not license_mgr.is_valid:
+            _LOGGER.debug("[Pago] Licență invalidă — se omit apelurile API")
+            return self.data or {}
+
         try:
             data = await self._client.async_fetch_all()
         except PagoAuthError as err:
