@@ -973,16 +973,76 @@
           "vizitatori_unici": 1
         }
       ]
+    },
+    "2026-04-14": {
+      "stars": 7,
+      "forks": 1,
+      "watchers": 1,
+      "open_issues": 0,
+      "referrers": [
+        {
+          "sursa": "github.com",
+          "vizite": 99,
+          "vizitatori_unici": 57
+        },
+        {
+          "sursa": "pagojira.atlassian.net",
+          "vizite": 13,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "l.facebook.com",
+          "vizite": 6,
+          "vizitatori_unici": 6
+        },
+        {
+          "sursa": "claude.ai",
+          "vizite": 6,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "hubinteligent.org",
+          "vizite": 5,
+          "vizitatori_unici": 4
+        },
+        {
+          "sursa": "lm.facebook.com",
+          "vizite": 4,
+          "vizitatori_unici": 4
+        },
+        {
+          "sursa": "buymeacoffee.com",
+          "vizite": 2,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "facebook.com",
+          "vizite": 2,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "m.facebook.com",
+          "vizite": 2,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "Google",
+          "vizite": 1,
+          "vizitatori_unici": 1
+        }
+      ]
     }
   },
   "releases": {
+    "1.4.4": 0,
+    "1.4.3": 0,
     "1.4.2": 1,
-    "1.4.1": 1,
+    "1.4.1": 2,
     "1.4.0": 0,
-    "1.3.0": 1,
+    "1.3.0": 2,
     "1.2.0": 0,
     "1.1.0": 3,
     "1.0.0": 0
   },
-  "ultima_actualizare": "2026-04-13T07:52:18Z"
+  "ultima_actualizare": "2026-04-14T07:21:44Z"
 }
