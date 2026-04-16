@@ -1087,6 +1087,54 @@
           "vizitatori_unici": 1
         }
       ]
+    },
+    "2026-04-16": {
+      "stars": 7,
+      "forks": 1,
+      "watchers": 1,
+      "open_issues": 0,
+      "referrers": [
+        {
+          "sursa": "github.com",
+          "vizite": 97,
+          "vizitatori_unici": 56
+        },
+        {
+          "sursa": "pagojira.atlassian.net",
+          "vizite": 13,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "hubinteligent.org",
+          "vizite": 9,
+          "vizitatori_unici": 5
+        },
+        {
+          "sursa": "claude.ai",
+          "vizite": 6,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "l.facebook.com",
+          "vizite": 5,
+          "vizitatori_unici": 3
+        },
+        {
+          "sursa": "buymeacoffee.com",
+          "vizite": 2,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "lm.facebook.com",
+          "vizite": 2,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "Google",
+          "vizite": 1,
+          "vizitatori_unici": 1
+        }
+      ]
     }
   },
   "releases": {
@@ -1100,5 +1148,5 @@
     "1.1.0": 3,
     "1.0.0": 0
   },
-  "ultima_actualizare": "2026-04-15T07:22:14Z"
+  "ultima_actualizare": "2026-04-16T07:22:52Z"
 }
