@@ -2140,6 +2140,23 @@
           "vizite": 5,
           "vizitatori_unici": 3
         }
+      ],
+      "clones_total": 14,
+      "clones_unice": 8,
+      "views_total": 0,
+      "views_unice": 0
+    },
+    "2026-05-28": {
+      "stars": 7,
+      "forks": 1,
+      "watchers": 1,
+      "open_issues": 0,
+      "referrers": [
+        {
+          "sursa": "github.com",
+          "vizite": 5,
+          "vizitatori_unici": 3
+        }
       ]
     }
   },
@@ -2154,5 +2171,5 @@
     "1.1.0": 4,
     "1.0.0": 0
   },
-  "ultima_actualizare": "2026-05-27T09:33:56Z"
+  "ultima_actualizare": "2026-05-28T09:51:23Z"
 }
