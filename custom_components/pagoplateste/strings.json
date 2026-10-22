@@ -7,7 +7,14 @@
         "data": {
           "email": "Email",
           "password": "Parolă",
-          "scan_interval": "Interval actualizare (secunde, minim 3600 = 1 oră)"
+          "scan_interval": "Interval actualizare (secunde, între 3600 = 1 oră și 86400 = 24 ore)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Pago Plătește — autentificare din nou",
+        "description": "Pago a respins parola salvată pentru {email}. Introduceți parola actuală.",
+        "data": {
+          "password": "Parolă"
         }
       }
     },
@@ -17,7 +24,8 @@
       "unknown": "Eroare necunoscută."
     },
     "abort": {
-      "already_configured": "Acest cont este deja configurat."
+      "already_configured": "Acest cont este deja configurat.",
+      "reauth_successful": "Reautentificare reușită."
     }
   },
   "options": {
@@ -55,7 +63,8 @@
       "license_key_expired": "Cheia de licență a expirat.",
       "license_fingerprint_mismatch": "Cheia nu corespunde acestui dispozitiv.",
       "license_network_error": "Eroare de rețea la verificarea licenței.",
-      "license_server_error": "Eroare server la verificarea licenței."
+      "license_server_error": "Eroare server la verificarea licenței.",
+      "already_configured": "Acest cont Pago este deja configurat."
     }
   },
   "entity": {

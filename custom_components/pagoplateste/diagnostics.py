@@ -30,7 +30,8 @@ async def async_get_config_entry_diagnostics(
     licenta_info: dict[str, Any] = {}
     if license_mgr:
         licenta_info = {
-            "fingerprint": license_mgr.fingerprint,
+            # Doar prefixul — fingerprint-ul complet identifică instalarea
+            "fingerprint": f"{license_mgr.fingerprint[:16]}...",
             "status": license_mgr.status,
             "license_key": license_mgr.license_key_masked,
             "is_valid": license_mgr.is_valid,
@@ -63,7 +64,8 @@ async def async_get_config_entry_diagnostics(
     # ── Config entry (fără date sensibile) ──
     return {
         "intrare": {
-            "titlu": entry.title,
+            # Titlul e numele titularului sau email-ul — mascat
+            "titlu": _mascheaza_titlu(entry.title),
             "versiune": entry.version,
             "domeniu": DOMAIN,
             "email": _mascheaza_email(entry.data.get("email", "")),
@@ -87,3 +89,12 @@ def _mascheaza_email(email: str) -> str:
     if len(local) <= 1:
         return f"*@{domain}"
     return f"{local[0]}{'*' * (len(local) - 1)}@{domain}"
+
+
+def _mascheaza_titlu(titlu: str) -> str:
+    """'Ion Popescu' → 'I** P******', email → mascat ca email."""
+    if "@" in (titlu or ""):
+        return _mascheaza_email(titlu)
+    return " ".join(
+        f"{cuv[0]}{'*' * (len(cuv) - 1)}" for cuv in (titlu or "").split() if cuv
+    ) or "***"

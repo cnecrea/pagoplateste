@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import datetime
 from typing import Any
 
 import aiohttp
+from homeassistant.util import dt as dt_util
 
 from .const import (
     API_TIMEOUT_DEFAULT,
@@ -28,6 +30,24 @@ class PagoAuthError(Exception):
 
 class PagoConnectionError(Exception):
     """Eroare de conexiune Pago."""
+
+
+def _json_sau_text(text: str) -> Any:
+    """Corpul răspunsului: JSON dacă se poate, altfel textul (None dacă e gol)."""
+    if not text.strip():
+        return None
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return text
+
+
+def _esuat(status: int) -> bool:
+    """Răspuns care NU spune nimic despre date (rețea, server, limitare).
+
+    Pentru acestea se păstrează datele anterioare; 404/204 înseamnă „nimic".
+    """
+    return status == 0 or status >= 500 or status in (401, 403, 408, 429)
 
 
 class PagoApiClient:
@@ -94,34 +114,38 @@ class PagoApiClient:
 
         try:
             async with asyncio.timeout(API_TIMEOUT_DEFAULT):
-                resp = await self._session.post(
+                async with self._session.post(
                     PAGO_AUTH_ENDPOINT,
                     headers=headers,
                     data=data,
-                )
+                ) as resp:
+                    status = resp.status
+                    body = _json_sau_text(await resp.text())
         except (asyncio.TimeoutError, aiohttp.ClientError) as err:
             raise PagoConnectionError(
                 f"Nu mă pot conecta la Pago: {err}"
             ) from err
 
-        if resp.status == 401:
+        if status == 401:
             raise PagoAuthError("Credențiale invalide")
-        if resp.status == 400:
-            body = await resp.json(content_type=None)
-            error = body.get("error_description", "Eroare necunoscută")
+        if status == 400 and isinstance(body, dict):
+            error = body.get("error_description") or body.get("error") or "Eroare necunoscută"
             raise PagoAuthError(f"Autentificare eșuată: {error}")
-        if resp.status != 200:
+        # 400 fără JSON (pagină HTML de la un proxy), 5xx, 429 … → temporar, nu parolă greșită
+        if status != 200 or not isinstance(body, dict):
             raise PagoConnectionError(
-                f"Răspuns neașteptat la login: HTTP {resp.status}"
+                f"Răspuns neașteptat la login: HTTP {status}"
             )
 
-        body = await resp.json(content_type=None)
-        self._token = body.get("access_token")
-        expires_in = body.get("expires_in", 3600)
+        token = body.get("access_token")
+        if not token:
+            raise PagoConnectionError("Răspunsul de login nu conține access_token")
+        try:
+            expires_in = int(body.get("expires_in") or 3600)
+        except (TypeError, ValueError):
+            expires_in = 3600
+        self._token = token
         self._token_expiry = time.time() + expires_in - 60  # 1 min buffer
-
-        if not self._token:
-            raise PagoAuthError("Răspunsul nu conține access_token")
 
         _LOGGER.debug("Pago: login OK, token expiră în %ds", expires_in)
         return True
@@ -147,24 +171,33 @@ class PagoApiClient:
     async def _get(
         self, path: str, timeout: int = API_TIMEOUT_DEFAULT
     ) -> tuple[int, Any]:
-        """GET request cu token automat."""
-        await self._ensure_token()
+        """GET request cu token automat.
+
+        La 401 (token revocat de Pago înainte de `expires_in`, ex. după schimbarea
+        parolei sau o repornire a serverului) se face UN re-login și se repetă
+        cererea. Înainte: token-ul respins era folosit până la expirarea lui
+        locală → date lipsă / „profil indisponibil" ore întregi.
+        Raises PagoAuthError dacă re-login-ul e respins (parolă schimbată).
+        """
+        for incercare in (1, 2):
+            await self._ensure_token()
+            token = self._token
+            status, body = await self._get_o_data(path, timeout)
+            if status == 401 and incercare == 1:
+                _LOGGER.debug("Pago: 401 pe %s — re-autentificare", path)
+                if self._token == token:  # alte cereri paralele au refăcut deja login-ul
+                    self._token = None
+                    self._token_expiry = 0
+                continue
+            return status, body
+        return status, body
+
+    async def _get_o_data(self, path: str, timeout: int) -> tuple[int, Any]:
         url = f"{PAGO_BASE_URL}{path}"
         try:
             async with asyncio.timeout(timeout):
-                resp = await self._session.get(url, headers=self._headers())
-                status = resp.status
-                text = await resp.text()
-                if text.strip():
-                    import json
-
-                    try:
-                        body = json.loads(text)
-                    except json.JSONDecodeError:
-                        body = text
-                else:
-                    body = None
-                return status, body
+                async with self._session.get(url, headers=self._headers()) as resp:
+                    return resp.status, _json_sau_text(await resp.text())
         except asyncio.TimeoutError:
             _LOGGER.debug("Pago: timeout pe %s (%ds)", path, timeout)
             return 0, {"error": f"Timeout ({timeout}s)"}
@@ -201,7 +234,7 @@ class PagoApiClient:
             "pos_user_id": data.get("posUserId"),
         }
 
-    async def async_fetch_masini(self) -> list[dict[str, Any]]:
+    async def async_fetch_masini(self) -> list[dict[str, Any]] | None:
         """Mașini cu alerte — /notification_v1_1/details/cars.
 
         Exact ca în pago_explorer.py fetch_masini().
@@ -209,7 +242,9 @@ class PagoApiClient:
         status, data = await self._get("/notification_v1_1/details/cars")
         if status != 200 or not isinstance(data, list):
             _LOGGER.debug("Pago: details/cars status=%d", status)
-            return []
+            # None = eșec temporar → coordinatorul păstrează mașinile anterioare
+            # (înainte: [] → toate vehiculele treceau pe „Fără RCA")
+            return None if _esuat(status) or status == 200 else []
 
         masini = []
         for car in data:
@@ -257,7 +292,8 @@ class PagoApiClient:
         """
         status, data = await self._get("/pago-freemium/subscription/active")
         if status != 200 or not isinstance(data, dict):
-            return None
+            # 404/204 = niciun abonament activ; restul = eșec temporar
+            return None if _esuat(status) or status == 200 else {}
         return {
             "activ": data.get("active", False),
             "subscription_id": data.get("subscriptionId"),
@@ -272,14 +308,14 @@ class PagoApiClient:
             "luna_curenta_sfarsit": data.get("currentMonthEnd"),
         }
 
-    async def async_fetch_carduri(self) -> list[dict[str, Any]]:
+    async def async_fetch_carduri(self) -> list[dict[str, Any]] | None:
         """Carduri — /payment/cards.
 
         Exact ca în pago_explorer.py fetch_carduri().
         """
         status, data = await self._get("/payment/cards")
         if status != 200 or not isinstance(data, list):
-            return []
+            return None if _esuat(status) or status == 200 else []
         return [
             {
                 "id": c.get("id"),
@@ -353,7 +389,7 @@ class PagoApiClient:
 
     async def async_fetch_facturi(
         self,
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
         """Facturi curente + conturi furnizori.
 
         1. /sdk/bills/accounts/summary → facturi emise (sumă + scadență).
@@ -361,14 +397,18 @@ class PagoApiClient:
            furnizor + locație per factură NU este accesibil pe pago.cloud.
            Bills SDK-ul din aplicație folosește un host intern separat.
         2. /payment/payment-details-v2 → conturi furnizori din plăți.
+
+        None pe o poziție = endpoint-ul a eșuat temporar (se păstrează datele vechi).
         """
-        facturi_sumar: list[dict[str, Any]] = []
+        facturi_sumar: list[dict[str, Any]] | None = []
 
         # ── 1. Facturi emise: /sdk/bills/accounts/summary ──
         s1, d1 = await self._get("/sdk/bills/accounts/summary")
         inner = self._unwrap(d1) if s1 == 200 and isinstance(d1, dict) else {}
         if not isinstance(inner, dict):
             inner = {}
+        if _esuat(s1):
+            facturi_sumar = None
         for b in inner.get("billsList") or []:
             facturi_sumar.append({
                 "suma_datorata": b.get("dueAmount"),
@@ -400,20 +440,27 @@ class PagoApiClient:
                     "auto_plata": p.get("autoPayment", False),
                 }
 
+        if _esuat(s2):
+            return facturi_sumar, None
         conturi_lista = sorted(
             conturi.values(), key=lambda x: x.get("locatie") or ""
         )
         return facturi_sumar, conturi_lista
 
     async def async_fetch_plati_recente(
-        self, count: int = 20
-    ) -> list[dict[str, Any]]:
-        """Ultimele N plăți (toate tipurile)."""
+        self, count: int = 100
+    ) -> list[dict[str, Any]] | None:
+        """Ultimele N plăți (toate tipurile).
+
+        100 (înainte 20): „Arhivă plăți" însumează plățile anului curent pe
+        furnizor — cu doar ultimele 20 de plăți (toate tipurile), totalul anual
+        era subestimat pentru conturile cu mai mulți furnizori.
+        """
         status, data = await self._get(
             f"/payment/payment-details-v2?paymentEntityType=all&size={count}&page=0"
         )
         if status != 200 or not isinstance(data, list):
-            return []
+            return None if _esuat(status) or status == 200 else []
 
         return [
             {
@@ -441,46 +488,47 @@ class PagoApiClient:
         # (previne login-uri multiple concurente)
         await self._ensure_token()
 
-        profil = None
-        abonament = None
-        carduri: list = []
-        masini: list = []
-        facturi_sumar: list = []
-        conturi_facturi: list = []
-        plati_recente: list = []
+        def _rezultat(r: Any, nume: str) -> Any:
+            if isinstance(r, PagoAuthError):
+                raise r  # parolă schimbată → reautentificare (nu „date lipsă")
+            if isinstance(r, BaseException):
+                _LOGGER.warning("Pago: eroare la %s: %s", nume, r)
+                return None
+            return r
 
         # Endpoints rapide — în paralel
-        try:
-            profil, masini, abonament, carduri = await asyncio.gather(
-                self.async_fetch_profil(),
-                self.async_fetch_masini(),
-                self.async_fetch_abonament(),
-                self.async_fetch_carduri(),
-            )
-        except Exception:  # noqa: BLE001
-            _LOGGER.warning("Pago: eroare la fetch endpoint-uri rapide", exc_info=True)
-
+        rapide = await asyncio.gather(
+            self.async_fetch_profil(),
+            self.async_fetch_masini(),
+            self.async_fetch_abonament(),
+            self.async_fetch_carduri(),
+            return_exceptions=True,
+        )
         # Facturi + plăți — în paralel
-        try:
-            (facturi_sumar, conturi_facturi), plati_recente = await asyncio.gather(
-                self.async_fetch_facturi(),
-                self.async_fetch_plati_recente(),
-            )
-        except Exception:  # noqa: BLE001
-            _LOGGER.warning("Pago: eroare la fetch facturi/plăți", exc_info=True)
+        lente = await asyncio.gather(
+            self.async_fetch_facturi(),
+            self.async_fetch_plati_recente(),
+            return_exceptions=True,
+        )
+        profil, masini, abonament, carduri = (
+            _rezultat(r, n) for r, n in zip(rapide, ("profil", "mașini", "abonament", "carduri"))
+        )
+        facturi = _rezultat(lente[0], "facturi") or (None, None)
+        plati_recente = _rezultat(lente[1], "plăți")
 
         # NOTĂ: roviniete și taxa_pod sunt excluse din ciclul de fetch
         # deoarece verificarea CNAIR per mașină durează ~30s × N mașini,
         # cauzând latență inacceptabilă pe coordinator update.
 
+        # None = endpoint eșuat temporar (coordinatorul păstrează valoarea anterioară)
         return {
-            "profil": profil or {},
-            "abonament": abonament or {},
-            "carduri": carduri or [],
-            "masini": masini or [],
-            "facturi_sumar": facturi_sumar or [],
-            "conturi_facturi": conturi_facturi or [],
-            "plati_recente": plati_recente or [],
+            "profil": profil,
+            "abonament": abonament,
+            "carduri": carduri,
+            "masini": masini,
+            "facturi_sumar": facturi[0],
+            "conturi_facturi": facturi[1],
+            "plati_recente": plati_recente,
         }
 
     # ═══════════════════════════════════════════════════════════════════
@@ -489,12 +537,17 @@ class PagoApiClient:
 
     @staticmethod
     def _ts(val: int | float | None) -> str | None:
-        """Timestamp milisecunde → YYYY-MM-DD HH:MM."""
+        """Timestamp milisecunde → YYYY-MM-DD HH:MM, în fusul orar din Home Assistant.
+
+        (Înainte: fusul orar al sistemului — UTC în multe containere Docker →
+        o expirare RCA de la 00:00 apărea în ziua precedentă, la 22:00.)
+        """
         if not val or not isinstance(val, (int, float)):
             return None
         try:
-            return datetime.fromtimestamp(val / 1000).strftime("%Y-%m-%d %H:%M")
-        except (ValueError, OSError):
+            moment = dt_util.as_local(dt_util.utc_from_timestamp(val / 1000))
+            return moment.strftime("%Y-%m-%d %H:%M")
+        except (ValueError, OSError, OverflowError):
             return str(val)
 
     @staticmethod

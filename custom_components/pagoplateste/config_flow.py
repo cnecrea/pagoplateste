@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import ConfigEntryState, ConfigFlowResult
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import selector
@@ -29,11 +30,85 @@ from .const import (
     DOMAIN,
     LICENSE_DATA_KEY,
     LICENSE_PURCHASE_URL,
+    MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
+from . import _signature
 from .api import PagoApiClient, PagoAuthError, PagoConnectionError
 
 _LOGGER = logging.getLogger(__name__)
+
+_PAROLA = selector.TextSelector(
+    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+)
+_INTERVAL = vol.All(
+    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
+)
+
+_ETICHETE_TIP_LICENTA = {
+    # Tipurile emise de WebAPI (LICENSE_DURATION)
+    "perpetual": ("perpetuă", "perpetual"),
+    "annual": ("anuală", "annual"),
+    "semi_annual": ("semestrială", "semi-annual"),
+    "monthly": ("lunară", "monthly"),
+}
+
+
+def _eticheta_tip_licenta(tip: str | None, is_ro: bool) -> str:
+    """Eticheta afișată pentru tipul de licență primit de la server."""
+    if not tip:
+        return "necunoscut" if is_ro else "unknown"
+    ro, en = _ETICHETE_TIP_LICENTA.get(tip, (tip, tip))
+    return ro if is_ro else en
+
+
+def _update_and_reload(
+    hass, entry: config_entries.ConfigEntry, data: dict[str, Any], **kwargs: Any
+) -> None:
+    """Salvează intrarea și o reîncarcă o singură dată.
+
+    Listener-ul de update reîncarcă singur intrarea când s-a schimbat
+    configurația; dacă intrarea nu rulează (setup eșuat, ex. parolă respinsă)
+    reîncărcăm aici. Decizia se ia ÎNAINTE de update: listener-ul pornește
+    imediat. (Înainte: update + reload explicit + create_entry = două reload-uri.)
+    """
+    runtime = getattr(entry, "runtime_data", None)
+    listener_reloads = (
+        entry.state is ConfigEntryState.LOADED
+        and runtime is not None
+        and getattr(runtime, "config_signature", None) != _signature(data, entry.options)
+    )
+    hass.config_entries.async_update_entry(entry, data=data, **kwargs)
+    if not listener_reloads:
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+
+
+async def _async_valideaza(hass, email: str, password: str) -> tuple[dict[str, Any], str, str]:
+    """Login + profil. Returnează (profil, phone_id, session_id).
+
+    Fără profil nu creăm intrarea: pos_user_id ar fi 0, iar două conturi ar
+    ajunge cu aceleași entity_id-uri (sensor.pagoplateste_0_…).
+    Raises PagoAuthError / PagoConnectionError.
+    """
+    phone_id = str(uuid.uuid4())
+    session_id = str(uuid.uuid4())
+    client = PagoApiClient(
+        session=async_get_clientsession(hass),
+        email=email,
+        password=password,
+        phone_id=phone_id,
+        session_id=session_id,
+    )
+    await client.async_login()
+    profil = await client.async_fetch_profil()
+    if not profil or not profil.get("pos_user_id"):
+        raise PagoConnectionError("Profilul Pago nu a putut fi citit")
+    return profil, phone_id, session_id
+
+
+def _titlu(profil: dict[str, Any], email: str) -> str:
+    name = f"{profil.get('nume') or ''} {profil.get('prenume') or ''}".strip()
+    return name or email
 
 
 # ------------------------------------------------------------------
@@ -64,39 +139,20 @@ class PagoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(self._email.lower())
             self._abort_if_unique_id_configured()
 
-            session = async_get_clientsession(self.hass)
-            phone_id = str(uuid.uuid4())
-            session_id = str(uuid.uuid4())
-
-            client = PagoApiClient(
-                session=session,
-                email=self._email,
-                password=self._password,
-                phone_id=phone_id,
-                session_id=session_id,
-            )
-
             try:
-                await client.async_login()
-                profil = await client.async_fetch_profil()
-
-                if profil:
-                    name = f"{profil.get('nume', '')} {profil.get('prenume', '')}".strip()
-                    pos_user_id = profil.get("pos_user_id", 0)
-                else:
-                    name = ""
-                    pos_user_id = 0
-
+                profil, phone_id, session_id = await _async_valideaza(
+                    self.hass, self._email, self._password
+                )
                 scan_interval = user_input.get(
                     CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
                 )
 
                 return self.async_create_entry(
-                    title=name or self._email,
+                    title=_titlu(profil, self._email),
                     data={
                         CONF_EMAIL: self._email,
                         CONF_PASSWORD: self._password,
-                        CONF_POS_USER_ID: pos_user_id,
+                        CONF_POS_USER_ID: profil["pos_user_id"],
                         CONF_SCAN_INTERVAL: scan_interval,
                         "phone_id": phone_id,
                         "session_id": session_id,
@@ -113,16 +169,57 @@ class PagoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_EMAIL): str,
-                vol.Required(CONF_PASSWORD): str,
+                vol.Required(CONF_PASSWORD): _PAROLA,
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
                     default=DEFAULT_SCAN_INTERVAL,
-                ): vol.All(int, vol.Range(min=MIN_SCAN_INTERVAL)),
+                ): _INTERVAL,
             }
         )
 
         return self.async_show_form(
             step_id="user", data_schema=schema, errors=errors
+        )
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Pornit de Home Assistant când Pago respinge parola salvată.
+
+        (Înainte coordinatorul cerea reautentificarea, dar flow-ul nu avea
+        pasul → eroare în log și integrarea rămânea picată.)
+        """
+        self._email = entry_data[CONF_EMAIL]
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Parola nouă → login → salvare + reload."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            password = user_input[CONF_PASSWORD]
+            try:
+                await _async_valideaza(self.hass, self._email, password)
+            except PagoAuthError:
+                errors["base"] = "auth_failed"
+            except PagoConnectionError:
+                errors["base"] = "connection_failed"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("[Pago:ConfigFlow] Eroare neașteptată la reautentificare")
+                errors["base"] = "unknown"
+            else:
+                entry = self._get_reauth_entry()
+                _update_and_reload(
+                    self.hass, entry, {**entry.data, CONF_PASSWORD: password}
+                )
+                return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required(CONF_PASSWORD): _PAROLA}),
+            errors=errors,
+            description_placeholders={"email": self._email},
         )
 
     @staticmethod
@@ -173,7 +270,7 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
         if server_status == "licensed":
             from datetime import datetime
 
-            tip = mgr.license_type or "necunoscut"
+            tip = _eticheta_tip_licenta(mgr.license_type, True)
             status_lines = [f"✅ Licență activă ({tip})"]
 
             if mgr.license_key_masked:
@@ -190,7 +287,7 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
                     mgr.license_expires_at
                 ).strftime("%d.%m.%Y %H:%M")
                 status_lines.append(f"📅 Expiră la: {exp_date}")
-            elif tip == "perpetual":
+            elif mgr.license_type == "perpetual":
                 status_lines.append("Valabilitate: nelimitată (perpetuă)")
 
             description_placeholders["license_status"] = "\n".join(status_lines)
@@ -252,15 +349,7 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
                 if result.get("success"):
                     from homeassistant.components import persistent_notification
 
-                    _LICENSE_TYPE_RO = {
-                        "monthly": "lunară",
-                        "yearly": "anuală",
-                        "perpetual": "perpetuă",
-                        "trial": "evaluare",
-                    }
-                    tip_ro = _LICENSE_TYPE_RO.get(
-                        mgr.license_type, mgr.license_type or "necunoscut"
-                    )
+                    tip_ro = _eticheta_tip_licenta(mgr.license_type, True)
 
                     persistent_notification.async_create(
                         self.hass,
@@ -274,14 +363,16 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
                     )
 
                 api_error = result.get("error", "unknown_error")
+                # Codurile WebAPI /activate + erorile locale
                 error_map = {
                     "invalid_key": "license_key_invalid",
                     "already_used": "license_already_used",
                     "expired_key": "license_key_expired",
                     "fingerprint_mismatch": "license_fingerprint_mismatch",
-                    "invalid_signature": "license_server_error",
                     "network_error": "license_network_error",
-                    "server_error": "license_server_error",
+                    "http_502": "license_network_error",
+                    "http_503": "license_network_error",  # server temporar ocupat
+                    "http_504": "license_network_error",
                 }
                 errors["base"] = error_map.get(api_error, "license_server_error")
 
@@ -308,57 +399,55 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Reconfigurare credențiale."""
         errors: dict[str, str] = {}
+        entry = self.config_entry
 
         if user_input is not None:
-            email = user_input[CONF_EMAIL]
+            email = user_input[CONF_EMAIL].strip()
             password = user_input[CONF_PASSWORD]
 
-            session = async_get_clientsession(self.hass)
-            phone_id = str(uuid.uuid4())
-            session_id = str(uuid.uuid4())
-
-            client = PagoApiClient(
-                session=session,
-                email=email,
-                password=password,
-                phone_id=phone_id,
-                session_id=session_id,
+            # Alt cont deja configurat cu același email → conflict
+            conflict = any(
+                e.entry_id != entry.entry_id and e.unique_id == email.lower()
+                for e in self.hass.config_entries.async_entries(DOMAIN)
             )
-
-            try:
-                await client.async_login()
-                profil = await client.async_fetch_profil()
-
-                if profil:
-                    scan_interval = user_input.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+            if conflict:
+                errors["base"] = "already_configured"
+            else:
+                try:
+                    profil, phone_id, session_id = await _async_valideaza(
+                        self.hass, email, password
                     )
-                    pos_user_id = profil.get("pos_user_id", 0)
-                    new_data = dict(self.config_entry.data)
-                    new_data[CONF_EMAIL] = email
-                    new_data[CONF_PASSWORD] = password
-                    new_data[CONF_POS_USER_ID] = pos_user_id
-                    new_data[CONF_SCAN_INTERVAL] = scan_interval
-                    new_data["phone_id"] = phone_id
-                    new_data["session_id"] = session_id
-
-                    self.hass.config_entries.async_update_entry(
-                        self.config_entry, data=new_data
-                    )
-                    await self.hass.config_entries.async_reload(
-                        self.config_entry.entry_id
-                    )
-                    return self.async_create_entry(data={})
-                else:
+                except PagoAuthError:
+                    errors["base"] = "auth_failed"
+                except PagoConnectionError:
                     errors["base"] = "connection_failed"
-            except PagoAuthError:
-                errors["base"] = "auth_failed"
-            except PagoConnectionError:
-                errors["base"] = "connection_failed"
-            except Exception:  # noqa: BLE001
-                errors["base"] = "unknown"
+                except Exception:  # noqa: BLE001
+                    _LOGGER.exception("[Pago:ConfigFlow] Eroare neașteptată la reconfigurare")
+                    errors["base"] = "unknown"
+                else:
+                    new_data = {
+                        **entry.data,
+                        CONF_EMAIL: email,
+                        CONF_PASSWORD: password,
+                        CONF_POS_USER_ID: profil["pos_user_id"],
+                        CONF_SCAN_INTERVAL: user_input.get(
+                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                        ),
+                        "phone_id": phone_id,
+                        "session_id": session_id,
+                    }
+                    # Un singur reload (înainte: reload explicit + încă unul de la
+                    # create_entry, care și golea opțiunile)
+                    _update_and_reload(
+                        self.hass,
+                        entry,
+                        new_data,
+                        unique_id=email.lower(),
+                        title=_titlu(profil, email),
+                    )
+                    return self.async_create_entry(data=dict(entry.options))
 
-        current = self.config_entry.data
+        current = entry.data
 
         schema = vol.Schema(
             {
@@ -367,11 +456,11 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
                 ): str,
                 vol.Required(
                     CONF_PASSWORD, default=current.get(CONF_PASSWORD, "")
-                ): str,
+                ): _PAROLA,
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
                     default=current.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                ): vol.All(int, vol.Range(min=MIN_SCAN_INTERVAL)),
+                ): _INTERVAL,
             }
         )
 

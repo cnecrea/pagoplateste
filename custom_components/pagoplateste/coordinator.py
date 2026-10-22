@@ -17,6 +17,8 @@ from .api import PagoApiClient, PagoAuthError, PagoConnectionError
 from .const import (
     CONF_EMAIL,
     CONF_POS_USER_ID,
+    DATA_ABONAMENT,
+    DATA_PROFIL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     LICENSE_DATA_KEY,
@@ -41,12 +43,16 @@ class PagoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN}_{entry.data[CONF_EMAIL]}",
+            config_entry=entry,
+            # Fără email în nume: apare în log-urile pe care utilizatorii le
+            # publică în issue-uri („Error fetching … data")
+            name=f"{DOMAIN}_{entry.data.get(CONF_POS_USER_ID) or entry.entry_id}",
             update_interval=timedelta(seconds=scan_interval),
             always_update=True,
         )
         self._entry = entry
         self._client = api_client
+        self._partial_raportat = False
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch date de la API-ul Pago."""
@@ -71,9 +77,29 @@ class PagoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 f"Eroare neașteptată Pago: {err}"
             ) from err
 
+        # None = endpoint eșuat temporar. Dacă nimic n-a răspuns → UpdateFailed;
+        # altfel se păstrează valorile anterioare pentru ce a eșuat (înainte: o
+        # cerere expirată golea cardurile/plățile și trecea mașinile pe „Fără RCA").
+        esuate = [k for k, v in data.items() if v is None]
+        if len(esuate) == len(data):
+            raise UpdateFailed("Pago: niciun serviciu nu a răspuns")
+        anterioare = self.data or {}
+        for k in esuate:
+            data[k] = anterioare.get(k, {} if k in (DATA_PROFIL, DATA_ABONAMENT) else [])
+
         # Verificăm că avem cel puțin profilul
-        if not data.get("profil"):
+        if not data.get(DATA_PROFIL):
             raise UpdateFailed("Pago: nu s-au putut obține datele profilului")
+
+        if esuate and not self._partial_raportat:
+            _LOGGER.warning(
+                "[Pago] Nu au răspuns: %s — păstrez datele anterioare",
+                ", ".join(esuate),
+            )
+            self._partial_raportat = True
+        elif not esuate and self._partial_raportat:
+            _LOGGER.info("[Pago] Toate datele s-au actualizat din nou")
+            self._partial_raportat = False
 
         return data
 

@@ -22,6 +22,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import (
     DATA_ABONAMENT,
@@ -127,10 +128,9 @@ def _zile_ramase(data_expirare: str | None) -> int | None:
     if not data_expirare or not isinstance(data_expirare, str):
         return None
     try:
-        # Parsăm doar partea de dată (primele 10 caractere)
-        exp = datetime.strptime(data_expirare[:10], "%Y-%m-%d")
-        delta = exp - datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return delta.days
+        # Parsăm doar partea de dată (primele 10 caractere); „azi" în fusul orar HA
+        exp = datetime.strptime(data_expirare[:10], "%Y-%m-%d").date()
+        return (exp - dt_util.now().date()).days
     except (ValueError, TypeError):
         return None
 
@@ -174,7 +174,7 @@ async def async_setup_entry(
         registru.async_remove(entitate_licenta)
 
     entities: list[SensorEntity] = []
-    an = datetime.now().year
+    an = dt_util.now().year
 
     # 1. Cont Pago — profil + abonament
     entities.append(ContPagoSensor(coordinator, entry, uid))
@@ -500,7 +500,7 @@ class ArhivaPlatiFurnizorSensor(PagoEntity, SensorEntity):
     def _plati_furnizor(self) -> list[dict[str, Any]]:
         """Plățile din anul curent pentru acest furnizor, sortate cronologic."""
         plati = self.coordinator.data.get(DATA_PLATI_RECENTE) or []
-        an_str = str(datetime.now().year)
+        an_str = str(dt_util.now().year)
         filtered = [
             p for p in plati
             if p.get("furnizor") == self._furnizor_raw
@@ -600,7 +600,7 @@ class FacturiEmiseSensor(PagoEntity, SensorEntity):
             sum((f.get("suma_datorata") or 0) for f in facturi), 2
         )
 
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = dt_util.now().strftime("%Y-%m-%d")
         restante = [
             f for f in facturi
             if f.get("scadenta") and f["scadenta"] <= today
@@ -665,7 +665,9 @@ class VehiculSensor(PagoEntity, SensorEntity):
         nr_lower = nr_inmatriculare.lower().replace(" ", "")
         self._attr_name = nr_inmatriculare
         self._attr_unique_id = f"{DOMAIN}_{uid}_{nr_lower}"
-        self._custom_entity_id = f"sensor.{DOMAIN}_{uid}_{nr_lower}"
+        # slugify: un număr cu „-" sau diacritice dădea un entity_id invalid
+        # (respins de HA din 2027.2); pentru numerele obișnuite rezultatul e identic
+        self._custom_entity_id = f"sensor.{DOMAIN}_{uid}_{slugify(nr_lower)}"
 
     def _get_masina(self) -> dict[str, Any]:
         """Găsește datele mașinii din coordinator."""
@@ -675,11 +677,13 @@ class VehiculSensor(PagoEntity, SensorEntity):
         return {}
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str | None:
         """Starea: OK dacă totul e valid, altfel primul element expirat."""
         if not self._license_valid:
             return "Licență necesară"
         masina = self._get_masina()
+        if not masina:
+            return None  # mașina nu mai e în cont — nu „Fără RCA"
         alerte = masina.get("alerte") or {}
 
         # Verificăm RCA

@@ -7,7 +7,14 @@
         "data": {
           "email": "Email",
           "password": "Password",
-          "scan_interval": "Update interval (seconds, minimum 3600 = 1 hour)"
+          "scan_interval": "Update interval (seconds, between 3600 = 1 hour and 86400 = 24 hours)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Pago Plătește — re-authenticate",
+        "description": "Pago rejected the saved password for {email}. Enter the current password.",
+        "data": {
+          "password": "Password"
         }
       }
     },
@@ -17,7 +24,8 @@
       "unknown": "Unknown error."
     },
     "abort": {
-      "already_configured": "This account is already configured."
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Re-authentication successful."
     }
   },
   "options": {
@@ -55,7 +63,8 @@
       "license_key_expired": "License key has expired.",
       "license_fingerprint_mismatch": "Key does not match this device.",
       "license_network_error": "Network error during license verification.",
-      "license_server_error": "Server error during license verification."
+      "license_server_error": "Server error during license verification.",
+      "already_configured": "This Pago account is already configured."
     }
   },
   "entity": {
