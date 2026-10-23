@@ -10,5 +10,5 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/cnecrea/pagoplateste/issues",
-  "version": "1.4.4"
+  "version": "1.4.5"
 }
