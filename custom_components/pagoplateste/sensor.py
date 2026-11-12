@@ -249,9 +249,10 @@ class LicentaNecesaraSensor(PagoEntity, SensorEntity):
             return "Licență necesară"
         status = mgr.status
         if status == "trial":
-            return f"Evaluare ({mgr.trial_days_remaining} zile)"
+            days = mgr.trial_days_remaining
+            return "Perioadă de test: " + ("o zi rămasă" if days == 1 else f"{days} {'de ' if days >= 20 else ''}zile rămase") if days > 0 else "Perioadă de test încheiată"
         if status == "expired":
-            return "Licență expirată"
+            return "Licență expirată" if mgr.has_license else "Perioadă de test încheiată"
         return "Licență necesară"
 
     @property
