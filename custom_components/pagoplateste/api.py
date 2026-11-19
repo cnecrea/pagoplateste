@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Any
@@ -48,6 +50,29 @@ def _esuat(status: int) -> bool:
     Pentru acestea se păstrează datele anterioare; 404/204 înseamnă „nimic".
     """
     return status == 0 or status >= 500 or status in (401, 403, 408, 429)
+
+
+def _preview_raspuns_eroare(
+    text: str, email: str, password: str, limita: int = 240
+) -> str:
+    """Fragment pentru diagnostic, cu datele de cont eliminate."""
+    preview = html.unescape(re.sub(r"<[^>]*>", " ", text))
+    if email:
+        preview = re.sub(re.escape(email), "<email>", preview, flags=re.IGNORECASE)
+    if password:
+        preview = preview.replace(password, "<parolă>")
+    preview = re.sub(
+        r"(?i)[\"']?\b(access_token|refresh_token|password|username|email|phone|phone_id|session_id|token)\b[\"']?\s*[:=]\s*[\"']?[^\s,;&\"'}]+",
+        r"\1=<redactat>",
+        preview,
+    )
+    preview = re.sub(
+        r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b",
+        "<id-redactat>",
+        preview,
+        flags=re.IGNORECASE,
+    )
+    return " ".join(preview.split())[:limita]
 
 
 class PagoApiClient:
@@ -112,6 +137,12 @@ class PagoApiClient:
             "password": self._password,
         }
 
+        _LOGGER.debug(
+            "Pago: încep login-ul către %s (versiune client %s)",
+            PAGO_AUTH_ENDPOINT,
+            PAGO_APP_VERSION,
+        )
+
         try:
             async with asyncio.timeout(API_TIMEOUT_DEFAULT):
                 async with self._session.post(
@@ -120,11 +151,24 @@ class PagoApiClient:
                     data=data,
                 ) as resp:
                     status = resp.status
-                    body = _json_sau_text(await resp.text())
+                    raw_body = await resp.text()
+                    body = _json_sau_text(raw_body)
+                    content_type = resp.headers.get("Content-Type", "necunoscut")
+                    server = resp.headers.get("Server", "necunoscut")
         except (asyncio.TimeoutError, aiohttp.ClientError) as err:
+            _LOGGER.warning("Pago: login-ul nu a putut ajunge la endpoint: %s", err)
             raise PagoConnectionError(
                 f"Nu mă pot conecta la Pago: {err}"
             ) from err
+
+        if status != 200:
+            _LOGGER.debug(
+                "Pago: răspuns login HTTP %d; server=%s; content_type=%s; preview=%r",
+                status,
+                server,
+                content_type,
+                _preview_raspuns_eroare(raw_body, self._email, self._password),
+            )
 
         if status == 401:
             raise PagoAuthError("Credențiale invalide")
@@ -134,7 +178,8 @@ class PagoApiClient:
         # 400 fără JSON (pagină HTML de la un proxy), 5xx, 429 … → temporar, nu parolă greșită
         if status != 200 or not isinstance(body, dict):
             raise PagoConnectionError(
-                f"Răspuns neașteptat la login: HTTP {status}"
+                f"Răspuns neașteptat la login: HTTP {status} "
+                f"(server={server}, content_type={content_type})"
             )
 
         token = body.get("access_token")
@@ -197,7 +242,16 @@ class PagoApiClient:
         try:
             async with asyncio.timeout(timeout):
                 async with self._session.get(url, headers=self._headers()) as resp:
-                    return resp.status, _json_sau_text(await resp.text())
+                    text = await resp.text()
+                    if resp.status >= 400:
+                        _LOGGER.debug(
+                            "Pago: GET %s a răspuns HTTP %d; server=%s; content_type=%s",
+                            path,
+                            resp.status,
+                            resp.headers.get("Server", "necunoscut"),
+                            resp.headers.get("Content-Type", "necunoscut"),
+                        )
+                    return resp.status, _json_sau_text(text)
         except asyncio.TimeoutError:
             _LOGGER.debug("Pago: timeout pe %s (%ds)", path, timeout)
             return 0, {"error": f"Timeout ({timeout}s)"}
