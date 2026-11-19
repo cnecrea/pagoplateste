@@ -38,7 +38,7 @@ PAGO_BASE_URL: Final = "https://pago.cloud"
 PAGO_AUTH_ENDPOINT: Final = f"{PAGO_BASE_URL}/authentication/uaa/oauth/token"
 PAGO_AUTH_BASIC: Final = "Basic cGFnby1tb2JpbGUtYXBwOnBhZ28tbW9iaWxlLWFwcC1zZWNyZXQ="
 PAGO_APP_ID: Final = "bed83d2a-6287-4e6c-9ce1-e7a49d4f2a43"
-PAGO_APP_VERSION: Final = "4.2.0"
+PAGO_APP_VERSION: Final = "5.1.0"
 
 # ═══════════════════════════════════════════════════════════════════════
 # Intervale actualizare
