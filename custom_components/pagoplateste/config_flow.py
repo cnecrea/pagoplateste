@@ -82,10 +82,16 @@ async def _async_valideaza(hass, email: str, password: str) -> tuple[dict[str, A
         phone_id=phone_id,
         session_id=session_id,
     )
+    _LOGGER.debug("[Pago:ConfigFlow] Începe validarea contului (login + profil).")
     await client.async_login()
+    _LOGGER.debug("[Pago:ConfigFlow] Login reușit; citesc profilul utilizatorului.")
     profil = await client.async_fetch_profil()
     if not profil or not profil.get("pos_user_id"):
+        _LOGGER.warning(
+            "[Pago:ConfigFlow] Login-ul a reușit, dar profilul lipsește sau nu are pos_user_id."
+        )
         raise PagoConnectionError("Profilul Pago nu a putut fi citit")
+    _LOGGER.debug("[Pago:ConfigFlow] Validarea contului s-a încheiat cu succes.")
     return profil, phone_id, session_id
 
 
@@ -141,9 +147,11 @@ class PagoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         "session_id": session_id,
                     },
                 )
-            except PagoAuthError:
+            except PagoAuthError as err:
+                _LOGGER.warning("[Pago:ConfigFlow] Login respins de Pago: %s", err)
                 errors["base"] = "auth_failed"
-            except PagoConnectionError:
+            except PagoConnectionError as err:
+                _LOGGER.warning("[Pago:ConfigFlow] Validarea conexiunii a eșuat: %s", err)
                 errors["base"] = "connection_failed"
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("[Pago:ConfigFlow] Eroare neașteptată")
@@ -184,9 +192,11 @@ class PagoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             password = user_input[CONF_PASSWORD]
             try:
                 await _async_valideaza(self.hass, self._email, password)
-            except PagoAuthError:
+            except PagoAuthError as err:
+                _LOGGER.warning("[Pago:ConfigFlow] Reautentificare respinsă de Pago: %s", err)
                 errors["base"] = "auth_failed"
-            except PagoConnectionError:
+            except PagoConnectionError as err:
+                _LOGGER.warning("[Pago:ConfigFlow] Validarea reautentificării a eșuat: %s", err)
                 errors["base"] = "connection_failed"
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("[Pago:ConfigFlow] Eroare neașteptată la reautentificare")
@@ -391,9 +401,11 @@ class PagoOptionsFlow(config_entries.OptionsFlow):
                     profil, phone_id, session_id = await _async_valideaza(
                         self.hass, email, password
                     )
-                except PagoAuthError:
+                except PagoAuthError as err:
+                    _LOGGER.warning("[Pago:ConfigFlow] Login la reconfigurare respins: %s", err)
                     errors["base"] = "auth_failed"
-                except PagoConnectionError:
+                except PagoConnectionError as err:
+                    _LOGGER.warning("[Pago:ConfigFlow] Validarea reconfigurării a eșuat: %s", err)
                     errors["base"] = "connection_failed"
                 except Exception:  # noqa: BLE001
                     _LOGGER.exception("[Pago:ConfigFlow] Eroare neașteptată la reconfigurare")
