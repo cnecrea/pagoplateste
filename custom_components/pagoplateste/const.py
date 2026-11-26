@@ -62,7 +62,7 @@ DATA_CARDURI: Final = "carduri"
 DATA_MASINI: Final = "masini"
 ## EXCLUSE din ciclul de fetch (latență CNAIR ~30s × N mașini):
 # DATA_ROVINIETE: Final = "roviniete"
-# DATA_TAXA_POD: Final = "taxa_pod"
+DATA_TAXA_POD: Final = "taxa_pod"
 DATA_FACTURI_SUMAR: Final = "facturi_sumar"
 DATA_CONTURI_FACTURI: Final = "conturi_facturi"
 DATA_PLATI_RECENTE: Final = "plati_recente"

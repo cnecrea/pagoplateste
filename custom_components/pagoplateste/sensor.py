@@ -32,6 +32,7 @@ from .const import (
     DATA_MASINI,
     DATA_PLATI_RECENTE,
     DATA_PROFIL,
+    DATA_TAXA_POD,
     DOMAIN,
     LICENSE_DATA_KEY,
 )
@@ -752,6 +753,22 @@ class VehiculSensor(PagoEntity, SensorEntity):
                 attrs["ITP zile rămase"] = zile_itp if zile_itp >= 0 else "Expirat"
         else:
             attrs["ITP"] = "Fără ITP"
+
+        # ── Rovinietă (END_VALIDITY_VIGNETTE din /details/cars) ──
+        rov_raw = alerte.get("rovinieta_expira")
+        if rov_raw:
+            zile_rov = _zile_ramase(rov_raw)
+            attrs["Rovinietă expiră"] = rov_raw
+            if zile_rov is not None:
+                attrs["Rovinietă zile rămase"] = zile_rov if zile_rov >= 0 else "Expirat"
+        else:
+            attrs["Rovinietă"] = "Fără rovinietă"
+
+        # ── Taxă pod (Fetești) — /pago-bridge-toll ──
+        for p in self.coordinator.data.get(DATA_TAXA_POD) or []:
+            if p.get("car_id") == self._car_id:
+                attrs["Taxă pod emisă"] = "Da" if p.get("are_taxa_pod") else "Nu"
+                break
 
         # ── Notificări ──
         if alerte.get("rca_notificare_sms") is not None:
