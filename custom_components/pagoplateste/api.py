@@ -326,7 +326,8 @@ class PagoApiClient:
                     m["alerte"]["itp_expira"] = data_str
                 elif tip == "END_VALIDITY_VINIETA":
                     m["alerte"]["vinieta_expira"] = data_str
-                elif tip == "END_VALIDITY_ROVINIETA":
+                elif tip in ("END_VALIDITY_ROVINIETA", "END_VALIDITY_VIGNETTE"):
+                    # Pago trimite rovinieta ca END_VALIDITY_VIGNETTE (null = fără rovinietă validă)
                     m["alerte"]["rovinieta_expira"] = data_str
                 elif tip == "END_VALIDITY_CASCO":
                     m["alerte"]["casco_expira"] = data_str
@@ -556,6 +557,7 @@ class PagoApiClient:
             self.async_fetch_masini(),
             self.async_fetch_abonament(),
             self.async_fetch_carduri(),
+            self.async_fetch_taxa_pod(),
             return_exceptions=True,
         )
         # Facturi + plăți — în paralel
@@ -564,15 +566,15 @@ class PagoApiClient:
             self.async_fetch_plati_recente(),
             return_exceptions=True,
         )
-        profil, masini, abonament, carduri = (
-            _rezultat(r, n) for r, n in zip(rapide, ("profil", "mașini", "abonament", "carduri"))
+        profil, masini, abonament, carduri, taxa_pod = (
+            _rezultat(r, n) for r, n in zip(rapide, ("profil", "mașini", "abonament", "carduri", "taxa pod"))
         )
         facturi = _rezultat(lente[0], "facturi") or (None, None)
         plati_recente = _rezultat(lente[1], "plăți")
 
-        # NOTĂ: roviniete și taxa_pod sunt excluse din ciclul de fetch
-        # deoarece verificarea CNAIR per mașină durează ~30s × N mașini,
-        # cauzând latență inacceptabilă pe coordinator update.
+        # NOTĂ: roviniete (endpoint /pago-vignette) rămân excluse din ciclul de fetch;
+        # data rovinietei vine din /details/cars (END_VALIDITY_VIGNETTE). taxa_pod
+        # răspunde rapid (~0.3 s) și e inclusă în ciclul rapid.
 
         # None = endpoint eșuat temporar (coordinatorul păstrează valoarea anterioară)
         return {
@@ -580,6 +582,7 @@ class PagoApiClient:
             "abonament": abonament,
             "carduri": carduri,
             "masini": masini,
+            "taxa_pod": taxa_pod,
             "facturi_sumar": facturi[0],
             "conturi_facturi": facturi[1],
             "plati_recente": plati_recente,
